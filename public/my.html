@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>我的投稿 - 导航map</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #f6f7f9; margin: 0; padding: 20px; }
+    .header-bar { max-width: 1000px; margin: 0 auto 20px; display: flex; justify-content: space-between; align-items: center; }
+    .header-bar a { text-decoration: none; color: #2563eb; font-size: 14px; }
+    .container { max-width: 1000px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,.05); }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e5e7eb; font-size: 14px; }
+    th { background: #f9fafb; font-weight: 600; color: #374151; }
+    .tag { font-size: 12px; padding: 4px 8px; border-radius: 4px; font-weight: 500; }
+    .tag-pending { background: #fef3c7; color: #92400e; }
+    .tag-published { background: #d1fae5; color: #065f46; }
+    .tag-rejected { background: #fee2e2; color: #991b1b; }
+    .btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 6px; }
+    .btn-withdraw { background: #ef4444; color: #fff; }
+    .btn-edit { background: #f59e0b; color: #fff; }
+    .btn:hover { opacity: 0.8; }
+    .url-text { font-size: 12px; color: #6b7280; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <div class="header-bar">
+    <a href="/">← 返回首页</a>
+  </div>
+  <div class="container">
+    <h2>我的投稿记录</h2>
+    <table>
+      <thead>
+        <tr><th>网站信息</th><th>分类</th><th>提交时间</th><th>状态</th><th>操作</th></tr>
+      </thead>
+      <tbody id="list"></tbody>
+    </table>
+  </div>
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) location.href = '/login.html';
+
+    const statusMap = {
+      'pending': '<span class="tag tag-pending">审核中</span>',
+      'published': '<span class="tag tag-published">已发布</span>',
+      'rejected': '<span class="tag tag-rejected">已拒绝</span>'
+    };
+
+    async function loadList() {
+      try {
+        const res = await fetch('/api/submissions/my', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json();
+        const tbody = document.getElementById('list');
+
+        if (data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;">你还没有投稿过任何网址</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = data.map(item => `
+          <tr>
+            <td>
+              <div style="font-weight:600; margin-bottom:4px;">${item.title}</div>
+              <div class="url-text"><a href="${item.url}" target="_blank">${item.url}</a></div>
+            </td>
+            <td>${item.category_name}</td>
+            <td>${new Date(item.created_at).toLocaleString()}</td>
+            <td>${statusMap[item.status] || item.status}</td>
+            <td>
+              ${item.status === 'pending' ? `<button class="btn btn-withdraw" onclick="withdraw(${item.id})">撤回</button>` : ''}
+              ${item.status === 'rejected' ? `<button class="btn btn-edit" onclick="editItem(${item.id}, '${item.title.replace(/'/g, "\\'")}', '${(item.description || '').replace(/'/g, "\\'")}')">修改</button>` : ''}
+            </td>
+          </tr>
+        `).join('');
+      } catch (err) { console.error(err); }
+    }
+
+    async function withdraw(id) {
+      if (!confirm('确定要撤回该投稿吗？')) return;
+      const res = await fetch('/api/submissions/' + id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+      if (res.ok) { alert('撤回成功'); loadList(); } else { alert('操作失败'); }
+    }
+
+    async function editItem(id, oldTitle, oldDesc) {
+      const title = prompt('请输入新的网站标题：', oldTitle);
+      if (title === null) return;
+      const description = prompt('请输入新的网站描述：', oldDesc);
+      if (description === null) return;
+      const res = await fetch('/api/submissions/' + id, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ title, description })
+      });
+      if (res.ok) { alert('修改成功，已重新进入审核'); loadList(); } else { alert('修改失败'); }
+    }
+    loadList();
+  </script>
+</body>
+</html>

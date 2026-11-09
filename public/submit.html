@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>提交网址 - 网址导航</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #f6f7f9; padding: 40px; display: flex; flex-direction: column; align-items: center; }
+    .header-bar { width: 100%; max-width: 500px; margin-bottom: 20px; }
+    .header-bar a { text-decoration: none; color: #2563eb; font-size: 14px; }
+    .box { background: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,.05); width: 100%; max-width: 500px; }
+    h2 { margin-top: 0; text-align: center; }
+    input, select, textarea { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-family: inherit; }
+    textarea { height: 80px; resize: vertical; }
+    button { width: 100%; padding: 10px; background: #2563eb; color: #fff; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; }
+    .msg { text-align: center; margin-top: 15px; font-size: 14px; }
+    .error { color: #b91c1c; }
+  </style>
+</head>
+<body>
+  <div class="header-bar"><a href="/">← 返回首页</a></div>
+  <div class="box">
+    <h2>提交新网址</h2>
+    <form id="submitForm">
+      <input type="url" id="url" placeholder="网站 URL（例如 https://example.com）" required />
+      <input type="text" id="title" placeholder="网站标题" required />
+      <textarea id="description" placeholder="网站描述（选填）"></textarea>
+      <select id="category" required>
+        <option value="">请选择分类</option>
+        <option value="1">小说</option>
+        <option value="2">影视</option>
+        <option value="3">音乐</option>
+        <option value="4">游戏</option>
+        <option value="5">工具</option>
+        <option value="6">新闻</option>
+        <option value="7">其他</option>
+      </select>
+      <button type="submit" id="btn">提交</button>
+    </form>
+    <div id="msg" class="msg error"></div>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('请先登录！即将跳转到登录页。');
+      location.href = '/login.html';
+    }
+
+    document.getElementById('submitForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msgEl = document.getElementById('msg');
+      const btn = document.getElementById('btn');
+      
+      const url = document.getElementById('url').value;
+      const title = document.getElementById('title').value;
+      const description = document.getElementById('description').value;
+      const categoryId = parseInt(document.getElementById('category').value);
+
+      btn.disabled = true;
+      btn.textContent = '提交中...';
+      msgEl.textContent = '';
+
+      try {
+        const res = await fetch('/api/submissions', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
+          body: JSON.stringify({ url, title, description, category_id: categoryId })
+        });
+        
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || '提交失败');
+
+        alert('提交成功！等待管理员审核。点击确定返回首页。');
+        location.href = '/';
+      } catch (err) {
+        msgEl.textContent = err.message;
+        btn.disabled = false;
+        btn.textContent = '提交';
+      }
+    });
+  </script>
+</body>
+</html>

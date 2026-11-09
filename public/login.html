@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>登录 - 网址导航</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #f6f7f9; padding: 40px; display: flex; justify-content: center; }
+    .box { background: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,.05); width: 100%; max-width: 400px; }
+    h2 { margin-top: 0; text-align: center; }
+    input { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+    button { width: 100%; padding: 10px; background: #2563eb; color: #fff; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; }
+    .msg { text-align: center; margin-top: 15px; font-size: 14px; color: #b91c1c; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>登录账号</h2>
+    <form id="loginForm">
+      <input type="email" id="email" placeholder="邮箱" required />
+      <input type="password" id="password" placeholder="密码" required />
+      <button type="submit">登录</button>
+    </form>
+    <div id="msg" class="msg"></div>
+  </div>
+
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msgEl = document.getElementById('msg');
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || '登录失败');
+
+        // 保存 Token 并跳转
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('userEmail', data.email);
+        location.href = '/';
+      } catch (err) {
+        msgEl.textContent = err.message;
+      }
+    });
+  </script>
+</body>
+</html>

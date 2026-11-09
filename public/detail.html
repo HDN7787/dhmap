@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>站点详情 - 导航站</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #f6f7f9; padding: 40px; display: flex; justify-content: center; }
+    .card { background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,.05); width: 100%; max-width: 600px; text-align: center; }
+    h1 { margin-top: 0; font-size: 28px; color: #111; }
+    .desc { color: #6b7280; font-size: 16px; line-height: 1.6; margin: 20px 0; }
+    .meta { font-size: 13px; color: #9ca3af; margin-bottom: 30px; }
+    .btn { display: inline-block; padding: 12px 32px; background: #2563eb; color: #fff; text-decoration: none; border-radius: 8px; font-size: 16px; transition: background .2s; margin-bottom: 16px;}
+    .btn:hover { background: #1d4ed8; }
+    .back { display: block; color: #6b7280; text-decoration: none; font-size: 14px; }
+    .back:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="card" id="app">
+    <p>加载中...</p>
+  </div>
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const siteId = urlParams.get('id');
+    if (!siteId) location.href = '/';
+
+    async function loadDetail() {
+      try {
+        const res = await fetch(`/api/site/${siteId}`);
+        if (!res.ok) throw new Error('未找到该站点');
+        const site = await res.json();
+        
+        document.getElementById('app').innerHTML = `
+          <h1>${site.title}</h1>
+          <div class="desc">${site.description || '这个站点很懒，还没有写描述。'}</div>
+          <div class="meta">所属分类：${site.category_name} | 收录域名：${site.registrable_domain}</div>
+          <a href="/go/${site.id}" target="_blank" class="btn">立即访问网站</a>
+          <a href="/" class="back">← 返回首页</a>
+        `;
+      } catch (err) {
+        document.getElementById('app').innerHTML = `<p style="color:red">${err.message}</p><a href="/" class="back">← 返回首页</a>`;
+      }
+    }
+    loadDetail();
+  </script>
+</body>
+</html>

@@ -1,0 +1,261 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>导航map - 精选优质网站导航</title>
+  <meta name="description" content="导航map是一个纯净的分类网址导航站..." />
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; margin: 0; background: #f6f7f9; color: #111; display: flex; flex-direction: column; min-height: 100vh; }
+    
+    header { background: #fff; border-bottom: 1px solid #e5e7eb; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+    .logo { font-size: 20px; font-weight: 700; color: #2563eb; cursor: pointer; text-decoration: none; display: flex; align-items: center; gap: 6px; }
+    .search-box { flex: 1; max-width: 400px; display: flex; margin: 0 20px; }
+    .search-box input { width: 100%; padding: 8px 16px; border: 1px solid #d1d5db; border-radius: 20px; outline: none; font-size: 14px; transition: border .2s; }
+    .search-box input:focus { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.1); }
+    
+    .nav-actions { display: flex; gap: 12px; align-items: center; font-size: 14px; }
+    .nav-actions a, .nav-actions button { text-decoration: none; color: #4b5563; cursor: pointer; background: none; border: none; font-family: inherit; transition: color .2s; }
+    .nav-actions a:hover, .nav-actions button:hover { color: #2563eb; }
+    .btn-primary { background: #2563eb !important; color: #fff !important; padding: 6px 16px !important; border-radius: 20px; }
+    
+    .main-container { display: flex; flex: 1; max-width: 1400px; margin: 0 auto; width: 100%; padding: 20px; gap: 20px; }
+    .sidebar { width: 200px; background: #fff; border-radius: 12px; padding: 12px 0; flex-shrink: 0; height: fit-content; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .cat-item { padding: 12px 20px; cursor: pointer; font-size: 15px; color: #4b5563; transition: all .2s; }
+    .cat-item:hover { background: #f3f4f6; color: #111; }
+    .cat-item.active { background: #eff6ff; color: #2563eb; font-weight: 600; border-left: 4px solid #2563eb; }
+    
+    .content { flex: 1; min-width: 0; }
+    .section-title { font-size: 18px; margin: 0 0 16px; display: flex; align-items: center; justify-content: space-between; color: #111; }
+    .site-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .site-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 8px; text-decoration: none; color: inherit; transition: transform .15s, box-shadow .15s; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+    .site-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.08); border-color: #d1d5db; }
+    .site-title { font-weight: 600; font-size: 15px; color: #1f2937; }
+    .site-desc { font-size: 13px; color: #6b7280; line-height: 1.5; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .site-cat { font-size: 12px; color: #2563eb; background: #eff6ff; padding: 2px 8px; border-radius: 12px; align-self: flex-start; }
+    .empty { color: #9ca3af; font-size: 14px; padding: 40px; text-align: center; background: #fff; border-radius: 12px; border: 1px dashed #d1d5db; }
+    
+    /* 分页组件 */
+    .pagination { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 20px; padding-bottom: 20px; }
+    .page-btn { padding: 8px 16px; border: 1px solid #d1d5db; background: #fff; border-radius: 6px; cursor: pointer; font-size: 14px; color: #374151; transition: all .2s; }
+    .page-btn:hover:not(:disabled) { border-color: #2563eb; color: #2563eb; }
+    .page-btn:disabled { background: #f3f4f6; color: #9ca3af; cursor: not-allowed; }
+
+    footer { text-align: center; padding: 24px; color: #9ca3af; font-size: 13px; border-top: 1px solid #e5e7eb; background: #fff; margin-top: auto; }
+
+    @media (max-width: 768px) {
+      .main-container { flex-direction: column; padding: 12px; gap: 12px; }
+      .sidebar { width: 100%; display: flex; overflow-x: auto; padding: 8px; white-space: nowrap; }
+      .cat-item { padding: 8px 16px; border-radius: 20px; border-left: none !important; }
+      .cat-item.active { border-left: none; }
+      .search-box { margin: 10px 0; max-width: 100%; order: 3; width: 100%; }
+      header { padding: 12px; }
+    }
+  </style>
+</head>
+<body>
+<header>
+  <a href="/" class="logo"><span>🧭</span>导航map</a>
+  <div class="search-box">
+    <input type="text" id="searchInput" placeholder="搜索网站名称或简介..." />
+  </div>
+  <div class="nav-actions" id="nav-actions"></div>
+</header>
+
+<div class="main-container">
+  <div class="sidebar" id="sidebar"></div>
+  <div class="content">
+    <!-- 搜索区 -->
+    <div id="search-result-area" style="display:none;">
+      <h2 class="section-title">🔍 搜索结果</h2>
+      <div id="search-grid" class="site-grid"></div>
+    </div>
+
+    <!-- 正常分类区 -->
+    <div id="normal-area">
+      <div style="margin-bottom: 32px;">
+        <h2 class="section-title">🔥 热门排行 (24h)</h2>
+        <div id="top-grid" class="site-grid"></div>
+      </div>
+      <div>
+        <h2 class="section-title" id="cat-title">加载中…</h2>
+        <div id="cat-grid" class="site-grid"></div>
+        <!-- 分页按钮 -->
+        <div class="pagination" id="pagination" style="display:none;">
+          <button class="page-btn" id="prevBtn" onclick="changePage(-1)">上一页</button>
+          <span id="pageInfo" style="font-size:14px; color:#6b7280;">第 1 页</span>
+          <button class="page-btn" id="nextBtn" onclick="changePage(1)">下一页</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <p>© 2026 导航map - 精选优质网站导航</p>
+</footer>
+
+<script>
+// --- 登录状态渲染 ---
+function renderNav() {
+  const nav = document.getElementById('nav-actions');
+  const token = localStorage.getItem('token');
+  const email = localStorage.getItem('userEmail');
+  let html = '';
+  if (token && email) {
+    html += `<span style="color:#6b7280;">${email}</span>`;
+    if (localStorage.getItem('userRole') === 'admin') html += `<a href="/admin.html">管理后台</a>`;
+    html += `<a href="/my.html">我的投稿</a>`;
+    html += `<a href="/submit.html" class="btn-primary">投稿网址</a>`;
+    html += `<button onclick="logout()">退出</button>`;
+  } else {
+    html += `<a href="/login.html">登录</a><a href="/register.html" class="btn-primary">注册</a>`;
+  }
+  nav.innerHTML = html;
+}
+function logout() { localStorage.clear(); location.reload(); }
+
+// --- 核心状态与缓存 ---
+let currentCategories = [];
+let currentSlug = '';
+let currentPage = 1;
+let hasMoreData = true;
+const pageSize = 18;
+const dataCache = {}; // 前端内存缓存：{ 'novel_1': [sites], 'novel_2': [sites] }
+
+async function load() {
+  try {
+    const res = await fetch('/api/categories');
+    currentCategories = await res.json();
+    
+    const sidebar = document.getElementById('sidebar');
+    currentCategories.forEach((cat, index) => {
+      const div = document.createElement('div');
+      div.className = 'cat-item' + (index === 0 ? ' active' : '');
+      div.textContent = cat.name;
+      div.onclick = () => {
+        document.getElementById('searchInput').value = '';
+        showNormalArea();
+        document.querySelectorAll('.cat-item').forEach(el => el.classList.remove('active'));
+        div.classList.add('active');
+        switchCategory(cat.slug, cat.name);
+      };
+      sidebar.appendChild(div);
+    });
+
+    if (currentCategories.length > 0) switchCategory(currentCategories[0].slug, currentCategories[0].name);
+
+    // 热门排行 9 个
+    const topRes = await fetch('/api/sites/top?window=24h&limit=9');
+    const topSites = await topRes.json();
+    renderGrid('top-grid', topSites);
+
+  } catch (err) { console.error('[front] 加载失败:', err); }
+}
+
+// 切换分类
+function switchCategory(slug, name) {
+  currentSlug = slug;
+  currentPage = 1;
+  document.getElementById('cat-title').textContent = name + ' - 推荐';
+  loadCategorySites();
+}
+
+// 加载分类数据（带缓存）
+async function loadCategorySites() {
+  const grid = document.getElementById('cat-grid');
+  const cacheKey = `${currentSlug}_${currentPage}`;
+  
+  // 缓存命中：极速响应
+  if (dataCache[cacheKey]) {
+    renderGrid('cat-grid', dataCache[cacheKey]);
+    updatePagination(dataCache[cacheKey].length === pageSize);
+    return;
+  }
+
+  grid.innerHTML = '<div class="empty">加载中...</div>';
+  document.getElementById('pagination').style.display = 'none';
+
+  try {
+    const res = await fetch(`/api/sites?category=${currentSlug}&page=${currentPage}&pageSize=${pageSize}`);
+    const sites = await res.json();
+    
+    // 写入缓存
+    dataCache[cacheKey] = sites;
+    
+    renderGrid('cat-grid', sites);
+    updatePagination(sites.length === pageSize);
+  } catch (err) { 
+    grid.innerHTML = '<div class="empty">加载失败</div>'; 
+  }
+}
+
+// 更新分页按钮状态
+function updatePagination(hasNext) {
+  hasMoreData = hasNext;
+  const pag = document.getElementById('pagination');
+  pag.style.display = 'flex';
+  document.getElementById('pageInfo').textContent = `第 ${currentPage} 页`;
+  document.getElementById('prevBtn').disabled = currentPage === 1;
+  document.getElementById('nextBtn').disabled = !hasMoreData;
+}
+
+// 翻页
+function changePage(delta) {
+  currentPage += delta;
+  loadCategorySites();
+  window.scrollTo({ top: 0, behavior: 'smooth' }); // 翻页后平滑滚回顶部
+}
+
+// --- 搜索功能 (防抖) ---
+let searchTimeout;
+document.getElementById('searchInput').addEventListener('input', (e) => {
+  const q = e.target.value.trim();
+  clearTimeout(searchTimeout);
+  if (!q) { showNormalArea(); return; }
+  searchTimeout = setTimeout(() => doSearch(q), 400);
+});
+
+async function doSearch(q) {
+  document.getElementById('normal-area').style.display = 'none';
+  document.getElementById('search-result-area').style.display = 'block';
+  const grid = document.getElementById('search-grid');
+  grid.innerHTML = '<div class="empty">搜索中...</div>';
+  
+  try {
+    const res = await fetch(`/api/sites?q=${encodeURIComponent(q)}`);
+    const sites = await res.json();
+    if (sites.length === 0) {
+      grid.innerHTML = `<div class="empty">没有找到与 "${q}" 相关的网站</div>`;
+    } else {
+      renderGrid('search-grid', sites);
+    }
+  } catch (err) { grid.innerHTML = '<div class="empty">搜索出错</div>'; }
+}
+
+function showNormalArea() {
+  document.getElementById('search-result-area').style.display = 'none';
+  document.getElementById('normal-area').style.display = 'block';
+}
+
+// --- 渲染工具 ---
+function renderGrid(elId, sites) {
+  const el = document.getElementById(elId);
+  if (!sites || sites.length === 0) { el.innerHTML = '<div class="empty">暂无站点</div>'; return; }
+  el.innerHTML = sites.map(s => `
+    <a class="site-card" href="/detail.html?id=${s.id}">
+      <span class="site-title">${s.title || s.registrable_domain}</span>
+      <span class="site-desc">${s.description || '暂无描述'}</span>
+      <span class="site-cat">${s.category_name}</span>
+    </a>
+  `).join('');
+}
+
+const email = localStorage.getItem('userEmail');
+if(email === '83262110@qq.com') localStorage.setItem('userRole', 'admin');
+renderNav();
+load();
+</script>
+</body>
+</html>

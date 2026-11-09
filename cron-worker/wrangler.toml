@@ -1,0 +1,12 @@
+name = "nav-site-cron"
+main = "src/index.js"
+compatibility_date = "2026-11-09"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "nav-site-db"
+database_id = "43ee5598-c9c0-4592-8ad6-72cb5f99d4ad"
+
+# 每 6 小时自动运行一次
+[triggers]
+crons = ["0 */6 * * *"]
