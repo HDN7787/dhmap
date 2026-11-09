@@ -59,39 +59,52 @@ async function runAutomatedPipeline(env) {
   }
   console.log(`[cron] ✅ 新增活站: ${insertedCount} 个`);
 
-  // --- 第二步：自动更新已有站点的 SEO 信息 ---
-  console.log('[cron] 开始抓取并更正已有站点的标题与描述...');
-  // 抽出 15 个需要更新信息的站点（比如刚被用户提交或采集进来，描述还是默认值的）
+  // --- 第二步：自动更新已有站点的 SEO 信息及分类 ---
+  console.log('[cron] 开始抓取并更正已有站点的标题、描述和分类...');
+  // 抽取 15 个需要更新信息的站点（描述还是默认值、或者标题是域名、或者分类是默认的7）
   const { results: sitesToUpdate } = await DB.prepare(`
     SELECT id, url, title FROM sites 
-    WHERE description = '自动采集收录' OR description = '暂无描述' OR description = '' OR title LIKE '%未命名%' OR title = registrable_domain
+    WHERE description IN ('自动采集收录', '暂无描述', '') 
+       OR title LIKE '%未命名%' 
+       OR title = registrable_domain
+       OR category_id = 7
     LIMIT 15
   `).all();
 
   for (const site of sitesToUpdate) {
     try {
       const seoInfo = await fetchSeoInfo(site.url);
+      
+      // 如果至少抓到了标题或描述，我们才更新
       if (seoInfo.title || seoInfo.description) {
+        // 更新 SQL，加入了 category_id
         await DB.prepare(`
           UPDATE sites SET 
             title = COALESCE(?, title), 
             description = COALESCE(?, description), 
+            category_id = ?,
             updated_at = datetime('now') 
           WHERE id = ?
-        `).bind(seoInfo.title, seoInfo.description, site.id).run();
-        console.log(`[cron] 📝 已更新SEO信息: ${site.url} -> ${seoInfo.title}`);
+        `).bind(
+          seoInfo.title || null, 
+          seoInfo.description || null, 
+          seoInfo.categoryId, 
+          site.id
+        ).run();
+        console.log(`[cron] 📝 已更新SEO与分类: ${site.url} -> ${seoInfo.title} (分类: ${seoInfo.categoryId})`);
       }
     } catch (e) { }
   }
 }
 
-// ================= 抓取网页 SEO 信息 =================
+// ================= 抓取网页 SEO 信息并智能判别分类 =================
 async function fetchSeoInfo(url) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 5000);
   try {
     const res = await fetch(url, { signal: controller.signal, headers: { 'User-Agent': 'Mozilla/5.0' } });
-    // 只解析 html
+    
+    // 只解析 html 网页
     if (!res.headers.get('content-type')?.includes('text/html')) return {};
     const html = await res.text();
     
@@ -106,15 +119,27 @@ async function fetchSeoInfo(url) {
                       html.match(/<meta[^>]*content=["']([\s\S]*?)["'][^>]*name=["']description["']/i);
     if (descMatch) description = descMatch[1].trim().replace(/\s+/g, ' ').substring(0, 150);
 
+    // 智能分类推断（基于提取到的 title 和 description 文本）
+    const text = title + ' ' + description;
+    let categoryId = 7; // 默认归入其他
+    
+    // 权重从上到下，优先识别特征明显的类别
+    if (/小说|阅读|文学|书|chapter|novel/i.test(text)) categoryId = 1;
+    else if (/影视|电影|视频|剧|动漫|movie|film|tv/i.test(text)) categoryId = 2;
+    else if (/音乐|歌|audio|电台|music|radio/i.test(text)) categoryId = 3;
+    else if (/游戏|电竞|game|手游|play/i.test(text)) categoryId = 4;
+    else if (/新闻|资讯|媒体|头条|news/i.test(text)) categoryId = 6;
+    else if (/工具|开发|下载|软件|科技|技术|tool|utility/i.test(text)) categoryId = 5;
+
     clearTimeout(timeoutId);
-    return { title, description };
+    return { title, description, categoryId };
   } catch (err) {
     clearTimeout(timeoutId);
     return {};
   }
 }
 
-// ================= 抓取工具 (RSS, GitHub, Web) =================
+// ================= 其他采集引擎 (RSS, GitHub, Web) =================
 async function collectRSS() {
   const feeds = [{ url: 'https://sspai.com/feed', cat: 5 }, { url: 'https://www.ithome.com/rss/', cat: 6 }];
   let items = [];
