@@ -8,7 +8,6 @@
   <meta name="keywords" content="网址导航, 网站推荐, 导航map, 精选网站, 工具导航" />
   <meta name="msvalidate.01" content="C2E13F82C6379FBC42DBC19067ABDE1A" />
   
-  <!-- Clarity tracking code -->
   <script>
       (function(c,l,a,r,i,t,y){
           c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
@@ -104,23 +103,18 @@
     .content { flex: 1; min-width: 0; }
     .section-title { font-size: 20px; font-weight: 700; margin: 0 0 16px; display: flex; align-items: center; gap: 8px; color: var(--text-main); letter-spacing: -0.5px; }
     
-    /* 🔥 核心修复：强制网格列数，彻底告别不对称 */
     .site-grid { 
       display: grid; 
       gap: 20px; 
       margin-bottom: 32px; 
-      /* 默认手机端 1 列 */
       grid-template-columns: 1fr; 
     }
-    /* 平板端 2 列 */
     @media (min-width: 640px) {
       .site-grid { grid-template-columns: repeat(2, 1fr); }
     }
-    /* 小桌面 3 列 */
     @media (min-width: 900px) {
       .site-grid { grid-template-columns: repeat(3, 1fr); }
     }
-    /* 大桌面 4 列（完美展示 12 个热门） */
     @media (min-width: 1200px) {
       .site-grid { grid-template-columns: repeat(4, 1fr); }
     }
@@ -205,10 +199,6 @@
     </div>
 
     <div id="normal-area">
-      <div style="margin-bottom: 36px;">
-        <h2 class="section-title">🔥 热门排行 (24h)</h2>
-        <div id="top-grid" class="site-grid"></div>
-      </div>
       <div>
         <h2 class="section-title" id="cat-title">加载中…</h2>
         <div id="cat-grid" class="site-grid"></div>
@@ -276,10 +266,7 @@ async function load() {
 
     if (currentCategories.length > 0) switchCategory(currentCategories[0].slug, currentCategories[0].name);
 
-    // 获取 12 个热门
-    const topRes = await fetch('/api/sites/top?window=24h&limit=12', { cache: 'no-store' });
-    const topSites = await topRes.json();
-    renderGrid('top-grid', topSites);
+    // 🔥 热门排行请求已删除
 
   } catch (err) { console.error('[front] 加载失败:', err); }
 }
@@ -362,13 +349,11 @@ function showNormalArea() {
   document.getElementById('normal-area').style.display = 'block';
 }
 
-// --- 修复图标问题，加入极速 API ---
 function renderGrid(elId, sites) {
   const el = document.getElementById(elId);
   if (!sites || sites.length === 0) { el.innerHTML = '<div class="empty">暂无站点</div>'; return; }
   
   el.innerHTML = sites.map(s => {
-    // 🔥 修复：换用国内更稳的 Favicon 抓取接口，如果挂了用首字母兜底
     const favicon = `https://favicon.im/${s.registrable_domain}?larger=true`;
     const firstLetter = (s.title || s.registrable_domain).charAt(0).toUpperCase();
     
