@@ -53,7 +53,24 @@
       header { padding: 12px; }
     }
   </style>
+
 </head>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "导航map",
+  "url": "https://dhmap.pages.dev/",
+  "description": "导航map是一个纯净的分类网址导航站，为您提供小说、影视、音乐、游戏、工具等各类优质网站的精选推荐。",
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": "https://dhmap.pages.dev/?q={search_term_string}",
+    "query-input": "required name=search_term_string"
+  }
+}
+</script>
+
 <body>
 <header>
   <a href="/" class="logo"><span>🧭</span>导航map</a>
@@ -244,7 +261,7 @@ function renderGrid(elId, sites) {
   const el = document.getElementById(elId);
   if (!sites || sites.length === 0) { el.innerHTML = '<div class="empty">暂无站点</div>'; return; }
   el.innerHTML = sites.map(s => `
-    <a class="site-card" href="/detail.html?id=${s.id}">
+    <a class="site-card" href="/site/${s.id}">
       <span class="site-title">${s.title || s.registrable_domain}</span>
       <span class="site-desc">${s.description || '暂无描述'}</span>
       <span class="site-cat">${s.category_name}</span>
