@@ -36,7 +36,6 @@
     .site-cat { font-size: 12px; color: #2563eb; background: #eff6ff; padding: 2px 8px; border-radius: 12px; align-self: flex-start; }
     .empty { color: #9ca3af; font-size: 14px; padding: 40px; text-align: center; background: #fff; border-radius: 12px; border: 1px dashed #d1d5db; }
     
-    /* 分页组件 */
     .pagination { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 20px; padding-bottom: 20px; }
     .page-btn { padding: 8px 16px; border: 1px solid #d1d5db; background: #fff; border-radius: 6px; cursor: pointer; font-size: 14px; color: #374151; transition: all .2s; }
     .page-btn:hover:not(:disabled) { border-color: #2563eb; color: #2563eb; }
@@ -53,31 +52,30 @@
       header { padding: 12px; }
     }
   </style>
-<meta name="msvalidate.01" content="C2E13F82C6379FBC42DBC19067ABDE1A" />
-<!-- Clarity tracking code for https://dhmap.pages.dev/ -->
-<script>
-    (function(c,l,a,r,i,t,y){
-        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i+"?ref=bwt";
-        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-    })(window, document, "clarity", "script", "zbfj4f4cp1");
-</script>
-</head>
-
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "WebSite",
-  "name": "导航map",
-  "url": "https://dhmap.pages.dev/",
-  "description": "导航map是一个纯净的分类网址导航站，为您提供小说、影视、音乐、游戏、工具等各类优质网站的精选推荐。",
-  "potentialAction": {
-    "@type": "SearchAction",
-    "target": "https://dhmap.pages.dev/?q={search_term_string}",
-    "query-input": "required name=search_term_string"
+  <meta name="msvalidate.01" content="C2E13F82C6379FBC42DBC19067ABDE1A" />
+  <!-- Clarity tracking code -->
+  <script>
+      (function(c,l,a,r,i,t,y){
+          c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+          t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i+"?ref=bwt";
+          y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+      })(window, document, "clarity", "script", "zbfj4f4cp1");
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "导航map",
+    "url": "https://dhmap.pages.dev/",
+    "description": "导航map是一个纯净的分类网址导航站，为您提供小说、影视、音乐、游戏、工具等各类优质网站的精选推荐。",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://dhmap.pages.dev/?q={search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
   }
-}
-</script>
+  </script>
+</head>
 
 <body>
 <header>
@@ -91,13 +89,11 @@
 <div class="main-container">
   <div class="sidebar" id="sidebar"></div>
   <div class="content">
-    <!-- 搜索区 -->
     <div id="search-result-area" style="display:none;">
       <h2 class="section-title">🔍 搜索结果</h2>
       <div id="search-grid" class="site-grid"></div>
     </div>
 
-    <!-- 正常分类区 -->
     <div id="normal-area">
       <div style="margin-bottom: 32px;">
         <h2 class="section-title">🔥 热门排行 (24h)</h2>
@@ -106,7 +102,6 @@
       <div>
         <h2 class="section-title" id="cat-title">加载中…</h2>
         <div id="cat-grid" class="site-grid"></div>
-        <!-- 分页按钮 -->
         <div class="pagination" id="pagination" style="display:none;">
           <button class="page-btn" id="prevBtn" onclick="changePage(-1)">上一页</button>
           <span id="pageInfo" style="font-size:14px; color:#6b7280;">第 1 页</span>
@@ -122,7 +117,6 @@
 </footer>
 
 <script>
-// --- 登录状态渲染 ---
 function renderNav() {
   const nav = document.getElementById('nav-actions');
   const token = localStorage.getItem('token');
@@ -141,17 +135,17 @@ function renderNav() {
 }
 function logout() { localStorage.clear(); location.reload(); }
 
-// --- 核心状态与缓存 ---
 let currentCategories = [];
 let currentSlug = '';
 let currentPage = 1;
 let hasMoreData = true;
 const pageSize = 18;
-const dataCache = {}; // 前端内存缓存：{ 'novel_1': [sites], 'novel_2': [sites] }
+const dataCache = {};
 
 async function load() {
   try {
-    const res = await fetch('/api/categories');
+    // 加上 cache: 'no-store'
+    const res = await fetch('/api/categories', { cache: 'no-store' });
     currentCategories = await res.json();
     
     const sidebar = document.getElementById('sidebar');
@@ -171,15 +165,14 @@ async function load() {
 
     if (currentCategories.length > 0) switchCategory(currentCategories[0].slug, currentCategories[0].name);
 
-    // 热门排行 9 个
-    const topRes = await fetch('/api/sites/top?window=24h&limit=9');
+    // 加上 cache: 'no-store'
+    const topRes = await fetch('/api/sites/top?window=24h&limit=9', { cache: 'no-store' });
     const topSites = await topRes.json();
     renderGrid('top-grid', topSites);
 
   } catch (err) { console.error('[front] 加载失败:', err); }
 }
 
-// 切换分类
 function switchCategory(slug, name) {
   currentSlug = slug;
   currentPage = 1;
@@ -187,12 +180,10 @@ function switchCategory(slug, name) {
   loadCategorySites();
 }
 
-// 加载分类数据（带缓存）
 async function loadCategorySites() {
   const grid = document.getElementById('cat-grid');
   const cacheKey = `${currentSlug}_${currentPage}`;
   
-  // 缓存命中：极速响应
   if (dataCache[cacheKey]) {
     renderGrid('cat-grid', dataCache[cacheKey]);
     updatePagination(dataCache[cacheKey].length === pageSize);
@@ -203,10 +194,10 @@ async function loadCategorySites() {
   document.getElementById('pagination').style.display = 'none';
 
   try {
-    const res = await fetch(`/api/sites?category=${currentSlug}&page=${currentPage}&pageSize=${pageSize}`);
+    // 加上 cache: 'no-store'
+    const res = await fetch(`/api/sites?category=${currentSlug}&page=${currentPage}&pageSize=${pageSize}`, { cache: 'no-store' });
     const sites = await res.json();
     
-    // 写入缓存
     dataCache[cacheKey] = sites;
     
     renderGrid('cat-grid', sites);
@@ -216,7 +207,6 @@ async function loadCategorySites() {
   }
 }
 
-// 更新分页按钮状态
 function updatePagination(hasNext) {
   hasMoreData = hasNext;
   const pag = document.getElementById('pagination');
@@ -226,14 +216,12 @@ function updatePagination(hasNext) {
   document.getElementById('nextBtn').disabled = !hasMoreData;
 }
 
-// 翻页
 function changePage(delta) {
   currentPage += delta;
   loadCategorySites();
-  window.scrollTo({ top: 0, behavior: 'smooth' }); // 翻页后平滑滚回顶部
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// --- 搜索功能 (防抖) ---
 let searchTimeout;
 document.getElementById('searchInput').addEventListener('input', (e) => {
   const q = e.target.value.trim();
@@ -249,7 +237,8 @@ async function doSearch(q) {
   grid.innerHTML = '<div class="empty">搜索中...</div>';
   
   try {
-    const res = await fetch(`/api/sites?q=${encodeURIComponent(q)}`);
+    // 加上 cache: 'no-store'
+    const res = await fetch(`/api/sites?q=${encodeURIComponent(q)}`, { cache: 'no-store' });
     const sites = await res.json();
     if (sites.length === 0) {
       grid.innerHTML = `<div class="empty">没有找到与 "${q}" 相关的网站</div>`;
@@ -264,7 +253,6 @@ function showNormalArea() {
   document.getElementById('normal-area').style.display = 'block';
 }
 
-// --- 渲染工具 ---
 function renderGrid(elId, sites) {
   const el = document.getElementById(elId);
   if (!sites || sites.length === 0) { el.innerHTML = '<div class="empty">暂无站点</div>'; return; }

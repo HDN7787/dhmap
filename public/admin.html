@@ -31,7 +31,6 @@
     .tag-rejected { background: #fee2e2; color: #991b1b; }
     .tag-inactive { background: #f3f4f6; color: #4b5563; }
     
-    /* 简单模态框 */
     #modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 100; }
     .modal-content { background:#fff; padding:20px; border-radius:8px; width: 400px; }
     .modal-content input, .modal-content textarea, .modal-content select { width:100%; margin-bottom:12px; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box; }
@@ -47,7 +46,6 @@
       <div class="tab" onclick="switchTab('sites')">已收录站点管理</div>
     </div>
 
-    <!-- 流水日志 Tab -->
     <div id="tab-logs">
       <div class="toolbar">
         <input type="text" id="logSearch" placeholder="搜索标题、网址、提交人..." />
@@ -56,6 +54,7 @@
           <option value="published">已发布</option>
           <option value="rejected">验证失败</option>
         </select>
+        <button class="btn btn-edit" onclick="loadLogs()">🔄 刷新</button>
       </div>
       <table>
         <thead><tr><th>ID</th><th>网站信息</th><th>来源</th><th>提交人</th><th>时间</th><th>状态</th></tr></thead>
@@ -63,11 +62,11 @@
       </table>
     </div>
 
-    <!-- 站点管理 Tab -->
     <div id="tab-sites" style="display:none;">
       <div class="toolbar">
         <input type="text" id="siteSearch" placeholder="搜索已收录站点..." />
         <select id="siteCat"><option value="">全部分类</option></select>
+        <button class="btn btn-edit" onclick="loadSites()">🔄 刷新</button>
       </div>
       <table>
         <thead><tr><th>ID</th><th>标题 / URL</th><th>分类</th><th>当前状态</th><th>操作</th></tr></thead>
@@ -76,7 +75,6 @@
     </div>
   </div>
 
-  <!-- 编辑弹窗 -->
   <div id="modal">
     <div class="modal-content">
       <h3>编辑站点信息</h3>
@@ -105,10 +103,9 @@
     let categories = [];
 
     async function init() {
-      const cRes = await fetch('/api/categories');
+      const cRes = await fetch('/api/categories', { cache: 'no-store' });
       categories = await cRes.json();
       
-      // 填充下拉框
       const catOptions = categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
       document.getElementById('siteCat').innerHTML = '<option value="">全部分类</option>' + catOptions;
       document.getElementById('editCat').innerHTML = catOptions;
@@ -129,10 +126,13 @@
       document.getElementById('tab-sites').style.display = tab === 'sites' ? 'block' : 'none';
     }
 
-    // --- 流水日志功能 ---
+    // 流水日志
     let logData = [];
     async function loadLogs() {
-      const res = await fetch('/api/admin/submissions', { headers: { 'Authorization': 'Bearer ' + token } });
+      const res = await fetch('/api/admin/submissions', { 
+        headers: { 'Authorization': 'Bearer ' + token },
+        cache: 'no-store' // 强制防缓存
+      });
       logData = await res.json();
       renderLogs();
     }
@@ -154,10 +154,13 @@
         </tr>`).join('');
     }
 
-    // --- 站点管理功能 ---
+    // 站点管理
     let siteData = [];
     async function loadSites() {
-      const res = await fetch('/api/admin/sites', { headers: { 'Authorization': 'Bearer ' + token } });
+      const res = await fetch('/api/admin/sites', { 
+        headers: { 'Authorization': 'Bearer ' + token },
+        cache: 'no-store' // 强制防缓存
+      });
       siteData = await res.json();
       renderSites();
     }
@@ -183,7 +186,6 @@
         </tr>`).join('');
     }
 
-    // --- 编辑与上下架操作 ---
     function openEdit(id) {
       const item = siteData.find(s => s.id === id);
       if (!item) return;
@@ -211,7 +213,7 @@
       });
       if (res.ok) {
         document.getElementById('modal').style.display = 'none';
-        loadSites(); // 重新加载列表
+        loadSites(); 
       } else { alert('保存失败'); }
     }
 

@@ -12,14 +12,12 @@
     let params = [];
 
     if (q) {
-      // 搜索不分页（限制前50条），保持简单
       sql = `SELECT s.id, s.title, s.description, s.registrable_domain, s.status, c.name AS category_name 
              FROM sites s JOIN categories c ON c.id = s.category_id 
              WHERE s.status IN ('active', 'blocked') AND (s.title LIKE ? OR s.description LIKE ?) 
              ORDER BY s.click_rank_24h DESC, s.id DESC LIMIT 50`;
       params = [`%${q}%`, `%${q}%`];
     } else if (categorySlug) {
-      // 分类查询：支持分页
       sql = `SELECT s.id, s.title, s.description, s.registrable_domain, s.status, c.name AS category_name 
              FROM sites s JOIN categories c ON c.id = s.category_id 
              WHERE c.slug = ? AND s.status IN ('active', 'blocked') 
@@ -31,10 +29,10 @@
 
     const { results } = await env.DB.prepare(sql).bind(...params).all();
     
-    // 返回数据，并设置缓存头：浏览器缓存 1 分钟，CDN 节点缓存 1 小时
+    // 【核心修改】不缓存 API 结果，保证数据实时
     return Response.json(results, {
       headers: {
-        'Cache-Control': 'public, max-age=60, s-maxage=3600'
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'
       }
     });
   } catch (err) {

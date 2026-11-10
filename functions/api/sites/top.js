@@ -12,7 +12,7 @@
     
     return Response.json(results, {
       headers: {
-        'Cache-Control': 'public, max-age=300, s-maxage=300' // 缓存 5 分钟
+        'Cache-Control': 'no-store'
       }
     });
   } catch (err) {
