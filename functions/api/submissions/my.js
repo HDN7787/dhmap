@@ -12,7 +12,9 @@ export async function onRequest(context) {
     const userId = payload.userId;
 
     const sql = `
-      SELECT s.id, s.url, s.title, s.description, s.status, s.created_at, c.name AS category_name
+      SELECT s.id, s.url, s.title, s.description, s.status, 
+             datetime(s.created_at, '+8 hours') AS created_at, 
+             c.name AS category_name
       FROM submissions s
       JOIN categories c ON s.category_id = c.id
       WHERE s.user_id = ? AND s.status != 'deleted'

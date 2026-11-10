@@ -5,7 +5,7 @@ export default {
   async fetch(request, env) {
     if (new URL(request.url).pathname === '/trigger') {
       await runAutomatedPipeline(env);
-      return new Response('✅ 智能榨干版采集完成', { status: 200 });
+      return new Response('✅ 泛娱乐垂直矩阵采集完成', { status: 200 });
     }
     return new Response('运行中', { status: 200 });
   }
@@ -15,215 +15,180 @@ async function runAutomatedPipeline(env) {
   const { DB } = env;
   if (!DB) return console.error('❌ 找不到 D1 数据库绑定');
 
-  console.log('🟢 [1/5] 智能采集任务启动...');
+  console.log('🟢 [1/6] 垂直泛娱乐矩阵启动...');
   let allCandidateItems = [];
 
-  // ================= 引擎 1：Awesome 宝藏库 =================
-  const awesomeUrls = [
-    'https://raw.githubusercontent.com/sindresorhus/awesome/main/readme.md',
-    'https://raw.githubusercontent.com/awesome-selfhosted/awesome-selfhosted/master/README.md'
-  ];
-  for (const url of awesomeUrls.sort(() => 0.5 - Math.random()).slice(0, 1)) {
-    try {
-      const text = await (await fetch(url)).text();
-      const regex = /\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g;
+  // ================= 引擎 1：小说（开源书源 - 精选） =================
+  try {
+    console.log('📖 抓取小说书源...');
+    const res = await fetch('https://raw.githubusercontent.com/entr0pia/MyLegadoSource/master/bookSource.json', { signal: AbortSignal.timeout(4000) });
+    if (res.ok) {
+      const data = await res.json();
+      for (const book of data.slice(0, 20)) {
+        const u = book.bookSourceUrl;
+        if (u && u.startsWith('http')) {
+          allCandidateItems.push({ url: u, originalTitle: book.bookSourceName || '小说站点', categoryId: 1 });
+        }
+      }
+    }
+  } catch (e) { console.error('❌ 小说源异常'); }
+
+  // ================= 引擎 2：影视（豆瓣电影 Top250 网页版） =================
+  try {
+    console.log('🎬 抓取豆瓣 Top250...');
+    const res = await fetch('https://movie.douban.com/top250', { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(4000) });
+    if (res.ok) {
+      const html = await res.text();
+      // 正则提取豆瓣条目链接
+      const regex = /href="(https:\/\/movie\.douban\.com\/subject\/\d+\/)"[^>]*>[\s\S]*?<span class="title">([^<]+)<\/span>/g;
       let match, count = 0;
-      while ((match = regex.exec(text)) !== null && count < 20) {
-        allCandidateItems.push({ url: match[2], originalTitle: match[1] });
+      while ((match = regex.exec(html)) !== null && count < 15) {
+        allCandidateItems.push({ url: match[1], originalTitle: match[2], categoryId: 2 });
         count++;
       }
-    } catch (e) {}
-  }
-
-  // ================= 引擎 2：中外综合 RSS =================
-  const rssFeeds = [
-    { url: 'https://sspai.com/feed' },
-    { url: 'https://36kr.com/feed' },
-    { url: 'https://www.ithome.com/rss/' },
-    { url: 'https://www.v2ex.com/index.xml' }
-  ];
-  for (const feed of rssFeeds.sort(() => 0.5 - Math.random()).slice(0, 2)) {
-    try {
-      const xml = await (await fetch(feed.url, { headers: { 'User-Agent': 'Mozilla/5.0' } })).text();
-      const itemRegex = /<item>[\s\S]*?<title>(.*?)<\/title>[\s\S]*?<link>(.*?)<\/link>[\s\S]*?<\/item>/g;
-      let match, count = 0;
-      while ((match = itemRegex.exec(xml)) !== null && count < 15) {
-        const title = match[1].replace(/<!\[CDATA\[|\]\]>/g, '').trim();
-        const link = match[2].trim();
-        if (link.startsWith('http')) {
-          allCandidateItems.push({ url: link, originalTitle: title });
-          count++;
-        }
-      }
-    } catch (e) {}
-  }
-
-  // ================= 引擎 3：高强度外链蜘蛛 =================
-  try {
-    // 每次随机抽 3 个已有站点去爬
-    const { results } = await DB.prepare(`SELECT url FROM sites ORDER BY RANDOM() LIMIT 3`).all();
-    for (const site of results) {
-      try {
-        const res = await fetch(site.url, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(4000) });
-        if (!res.ok) continue;
-        const html = await res.text();
-        const regex = /<a[^>]+href=["'](https?:\/\/[^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
-        let match, count = 0;
-        while ((match = regex.exec(html)) !== null && count < 10) {
-          const title = match[2].replace(/<[^>]+>/g, '').trim();
-          if (title.length > 1) { // 必须有文字，跳过纯图标链接
-            allCandidateItems.push({ url: match[1], originalTitle: title });
-            count++;
-          }
-        }
-      } catch (e) {}
     }
-  } catch (e) {}
+  } catch (e) { console.error('❌ 豆瓣异常'); }
 
-  console.log(`🟡 [2/5] 总计获取 ${allCandidateItems.length} 条原始数据，开始智能净化与去重...`);
+  // ================= 引擎 3：音乐（网易云热门歌手页） =================
+  try {
+    console.log('🎵 抓取网易云热门榜单...');
+    const res = await fetch('https://music.163.com/discover/artist', { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(4000) });
+    if (res.ok) {
+      const html = await res.text();
+      // 抓取歌手页链接
+      const regex = /href="(\/artist\?id=\d+)"[^>]*>([^<]+)<\/a>/g;
+      let match, count = 0;
+      while ((match = regex.exec(html)) !== null && count < 15) {
+        allCandidateItems.push({ url: `https://music.163.com${match[1]}`, originalTitle: `${match[2]} - 音乐`, categoryId: 3 });
+        count++;
+      }
+    }
+  } catch (e) { console.error('❌ 音乐异常'); }
 
-  // ================= 核心清洗与黑名单 =================
+  // ================= 引擎 4：游戏（游民星空 + 3DM） =================
+  try {
+    console.log('🎮 抓取游戏门户...');
+    // 游民星空
+    const res1 = await fetch('https://www.gamersky.com/', { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(4000) });
+    if (res1.ok) {
+      const html = await res1.text();
+      const regex = /href="(https?:\/\/www\.gamersky\.com\/[a-z]+\/\d+\.shtml)"[^>]*>([^<]+)<\/a>/g;
+      let match, count = 0;
+      while ((match = regex.exec(html)) !== null && count < 10) {
+        allCandidateItems.push({ url: match[1], originalTitle: match[2], categoryId: 4 });
+        count++;
+      }
+    }
+    // 3DM
+    const res2 = await fetch('https://www.3dmgame.com/', { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(4000) });
+    if (res2.ok) {
+      const html = await res2.text();
+      const regex = /href="(https?:\/\/www\.3dmgame\.com\/news\/\d+\.html)"[^>]*>([^<]+)<\/a>/g;
+      let match, count = 0;
+      while ((match = regex.exec(html)) !== null && count < 10) {
+        allCandidateItems.push({ url: match[1], originalTitle: match[2], categoryId: 4 });
+        count++;
+      }
+    }
+  } catch (e) { console.error('❌ 游戏异常'); }
+
+  // ================= 引擎 5：B站排行（补充影视/游戏） =================
+  try {
+    console.log('📺 抓取 B站排行榜...');
+    const res = await fetch('https://www.bilibili.com/v/popular/rank/all', { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(4000) });
+    if (res.ok) {
+      const html = await res.text();
+      const regex = /href="(\/\/www\.bilibili\.com\/video\/[a-zA-Z0-9]+)"[^>]*>[\s\S]*?class="title">([^<]+)<\/a>/g;
+      let match, count = 0;
+      while ((match = regex.exec(html)) !== null && count < 10) {
+        allCandidateItems.push({ url: `https:${match[1]}`, originalTitle: match[2], categoryId: 2 });
+        count++;
+      }
+    }
+  } catch (e) { console.error('❌ B站异常'); }
+
+  console.log(`🟡 [2/6] 获取 ${allCandidateItems.length} 条数据，进行黑名单与去重清洗...`);
+
+  // ================= 核心：极限清洗与防大厂子域刷屏 =================
   const uniqueCandidates = [];
   const seenDomains = new Set();
   
   for (const item of allCandidateItems) {
-    const cleanUrl = normalizeUrl(item.url);
-    if (!cleanUrl) continue; // 被黑名单拦截或格式不对
-
+    if (!item.url) continue;
     let hostname = '';
     try {
-      hostname = new URL(cleanUrl).hostname.toLowerCase().replace(/^www\./, '');
+      hostname = new URL(item.url).hostname.toLowerCase().replace(/^www\./, '');
     } catch (e) { continue; }
     
+    // 🚫 拦截大厂无意义子域，防止刷屏
+    const badSubdomains = [
+      'z.qqzone.com', 'browser.qq.com', 'guanjia.qq.com', 'cloud.tencent.com',
+      'im.qq.com', 'fm.qq.com', 'weiyun.com', 'pan.baidu.com', 'tieba.baidu.com',
+      'music.163.com', 'movie.douban.com' // 这些主站直接收录，不收录里面的具体条目
+    ];
+    if (badSubdomains.includes(hostname)) continue;
+
+    // 如果是具体的豆瓣电影条目、B站视频、网易云音乐，强制截断回主站
+    if (hostname === 'movie.douban.com') hostname = 'douban.com';
+    if (hostname === 'music.163.com') hostname = 'music.163.com'; // 网易云保留
+    if (hostname === 'www.bilibili.com') hostname = 'bilibili.com';
+
     if (seenDomains.has(hostname)) continue;
     seenDomains.add(hostname);
     
+    // 查库
     const existing = await DB.prepare('SELECT id FROM sites WHERE registrable_domain = ?').bind(hostname).first();
     if (existing) continue; 
     
     uniqueCandidates.push({ 
-      url: cleanUrl, 
+      url: `https://${hostname}/`, // 强制回退到主域名首页，防止收录具体文章死链
       hostname: hostname, 
-      originalTitle: item.originalTitle 
+      originalTitle: item.originalTitle, 
+      categoryId: item.categoryId 
     });
   }
 
-  console.log(`🟡 [3/5] 净化后，发现 ${uniqueCandidates.length} 个新域名。开始验证与 SEO 抓取...`);
+  console.log(`🟡 [3/6] 清洗后剩余 ${uniqueCandidates.length} 个新域名，开始抓取 SEO...`);
 
-  // ================= 验证、抓取真实信息、智能分类 =================
-  const itemsToVerify = uniqueCandidates.slice(0, 30);
+  // ================= 验证、SEO抓取、入库 =================
+  const itemsToVerify = uniqueCandidates.slice(0, 25);
   let insertedCount = 0;
   
   for (let i = 0; i < itemsToVerify.length; i += 5) {
     const batch = itemsToVerify.slice(i, i + 5);
     await Promise.all(batch.map(async (item) => {
-      // 爬取真实网页的 SEO 信息（不仅验证死活，还拿标题和描述）
       const seoData = await fetchSeoInfo(item.url);
+      if (!seoData) return;
       
-      if (!seoData) {
-        console.log(`⚠️ 无法访问: ${item.hostname}`);
-        return;
-      }
+      const finalTitle = seoData.title || item.originalTitle;
+      const finalDesc = seoData.description || '精选泛娱乐站点';
       
-      // 组合最完美的标题和描述
-      const finalTitle = seoData.title || item.originalTitle || item.hostname;
-      const finalDesc = seoData.description || '优质网站自动收录';
-      
-      // 🧠 智能分类引擎（根据抓到的文字自动打标签）
-      const categoryId = autoCategorize(finalTitle, finalDesc, item.url);
-
       try {
-        await DB.prepare(`INSERT INTO sites (url, registrable_domain, title, description, category_id, status) VALUES (?, ?, ?, ?, ?, 'active')`).bind(item.url, item.hostname, finalTitle, finalDesc, categoryId).run();
-        await DB.prepare(`INSERT INTO submissions (user_id, url, registrable_domain, title, description, category_id, status) VALUES (999, ?, ?, ?, ?, ?, 'published')`).bind(item.url, item.hostname, finalTitle, finalDesc, categoryId).run();
+        await DB.prepare(`INSERT INTO sites (url, registrable_domain, title, description, category_id, status) VALUES (?, ?, ?, ?, ?, 'active')`).bind(item.url, item.hostname, finalTitle, finalDesc, item.categoryId).run();
+        await DB.prepare(`INSERT INTO submissions (user_id, url, registrable_domain, title, description, category_id, status) VALUES (999, ?, ?, ?, ?, ?, 'published')`).bind(item.url, item.hostname, finalTitle, finalDesc, item.categoryId).run();
         insertedCount++;
-        console.log(`✅ 入库: [${finalTitle}] ${item.hostname} (分类:${categoryId})`);
+        console.log(`✅ 入库: [${finalTitle}] ${item.hostname} (分类:${item.categoryId})`);
       } catch (dbErr) { }
     }));
   }
-  
-  console.log(`🏁 [4/5] 任务结束！本轮成功新增 ${insertedCount} 个站点。`);
+  console.log(`🏁 [4/6] 任务结束！本轮成功新增 ${insertedCount} 个站点。`);
 }
 
-// ================= 超级工具库 =================
-
-// 1. URL 净化器：去伪存真，只留纯净主域名，拉黑垃圾站
-function normalizeUrl(rawUrl) {
-  try {
-    const u = new URL(rawUrl);
-    const domain = u.hostname.toLowerCase();
-
-    // 🚫 强力黑名单（社交、条款、订阅、大厂内部页）
-    const blacklist = [
-      'facebook.com', 'twitter.com', 'x.com', 'instagram.com', 'youtube.com', 
-      'linkedin.com', 'pinterest.com', 'feedburner.com', 'w3.org', 'wikipedia.org',
-      'google.com', 'baidu.com', 'github.com', 'gitee.com' // 纯导航站收录这些大厂首页意义不大，如果有特定子站另行处理
-    ];
-    if (blacklist.some(b => domain.includes(b))) return null;
-
-    const path = u.pathname.toLowerCase();
-    // 🚫 路径黑名单
-    const badPaths = ['/terms', '/privacy', '/login', '/signup', '/about', '/contact', '/service', '/agreement'];
-    if (badPaths.some(p => path.includes(p))) return null;
-    
-    // 🚫 垃圾后缀
-    if (path.endsWith('.xml') || path.endsWith('.rss') || path.endsWith('.json')) return null;
-
-    // ✂️ 核心截断：无论 URL 多长，强制变成 协议 + 域名 + 根路径
-    return `${u.protocol}//${u.hostname}/`;
-  } catch (e) {
-    return null;
-  }
-}
-
-// 2. 智能分类引擎
-function autoCategorize(title, desc, url) {
-  const text = (title + ' ' + desc + ' ' + url).toLowerCase();
-  if (/小说|阅读|文学|书|novel|book|read|chapter/i.test(text)) return 1;
-  if (/影视|电影|视频|剧|movie|film|tv|video|bilibili|douban/i.test(text)) return 2;
-  if (/音乐|歌|audio|music|radio|song|163\.com|qq\.com\/music/i.test(text)) return 3;
-  if (/游戏|电竞|game|play|steam|手游/i.test(text)) return 4;
-  if (/新闻|资讯|媒体|news|info/i.test(text)) return 6;
-  if (/工具|开发|下载|软件|tool|utility|api|dev/i.test(text)) return 5;
-  return 7; // 实在认不出来，扔到“其他”
-}
-
-// 3. 验证与抓取 SEO
+// ================= 工具函数 =================
 async function fetchSeoInfo(url) {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
-    
-    const res = await fetch(url, { 
-      method: 'GET', 
-      redirect: 'follow', 
-      signal: controller.signal, 
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0' } 
-    });
-    
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    const res = await fetch(url, { method: 'GET', redirect: 'follow', signal: controller.signal, headers: { 'User-Agent': 'Mozilla/5.0' } });
     clearTimeout(timeoutId);
-    
-    // 只要不是 404/500，算活着
-    if (![200, 201, 202, 204, 301, 302, 304, 401, 403, 429].includes(res.status)) {
-      return null; 
-    }
-
-    if (!res.headers.get('content-type')?.includes('text/html')) {
-      return { title: '', description: '' }; 
-    }
-
+    if (![200, 201, 202, 204, 301, 302, 304, 401, 403, 429].includes(res.status)) return null;
+    if (!res.headers.get('content-type')?.includes('text/html')) return { title: '', description: '' }; 
     const html = await res.text();
-    
-    let title = '';
+    let title = '', description = '';
     const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-    if (titleMatch) title = titleMatch[1].trim().replace(/\s+/g, ' ').substring(0, 50);
-
-    let description = '';
-    const descMatch = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([\s\S]*?)["']/i) || 
-                      html.match(/<meta[^>]*content=["']([\s\S]*?)["'][^>]*name=["']description["']/i);
-    if (descMatch) description = descMatch[1].trim().replace(/\s+/g, ' ').substring(0, 150);
-
+    if (titleMatch) title = titleMatch[1].trim().substring(0, 50);
+    const descMatch = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([\s\S]*?)["']/i);
+    if (descMatch) description = descMatch[1].trim().substring(0, 150);
     return { title, description };
-  } catch (err) {
-    return null;
-  }
+  } catch (err) { return null; }
 }

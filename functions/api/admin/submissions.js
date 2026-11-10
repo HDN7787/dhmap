@@ -5,7 +5,9 @@ export async function onRequest(context) {
   
   try {
     const sql = `
-      SELECT s.id, s.url, s.title, s.created_at, s.status, s.category_id,
+      SELECT s.id, s.url, s.title, 
+             datetime(s.created_at, '+8 hours') AS created_at, 
+             s.status, s.category_id,
              u.email AS user_email, 
              c.name AS category_name
       FROM submissions s
