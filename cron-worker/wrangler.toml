@@ -10,3 +10,11 @@ database_id = "43ee5598-c9c0-4592-8ad6-72cb5f99d4ad"
 # 每 6 小时自动运行一次
 [triggers]
 crons = ["0 */6 * * *"]
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+[observability.logs]
+enabled = true
+invocation_logs = true
+persist = true
